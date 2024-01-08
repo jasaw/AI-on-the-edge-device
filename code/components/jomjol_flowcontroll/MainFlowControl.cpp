@@ -700,6 +700,11 @@ esp_err_t handler_editflow(httpd_req_t *req)
         int sat = -100;
         int con = -100;
         int intens = -100;
+    #ifdef GRAYSCALE_AS_DEFAULT
+        bool grayscale = true;
+    #else
+        bool grayscale = false;
+    #endif
 
         if (httpd_query_key_value(_query, "host", _valuechar, 30) == ESP_OK) {
             _host = std::string(_valuechar);
@@ -720,12 +725,20 @@ esp_err_t handler_editflow(httpd_req_t *req)
             _sat = std::string(_valuechar);
             sat = stoi(_sat);
         }
+        if (httpd_query_key_value(_query, "gray", _valuechar, 30) == ESP_OK) {
+            std::string _gr = std::string(_valuechar);
+            if (stoi(_gr) != 0)
+                grayscale = true;
+            else
+                grayscale = false;
+        }
 
 
 //        ESP_LOGD(TAG, "Parameter host: %s", _host.c_str());
 //        string zwzw = "Do " + _task + " start\n"; ESP_LOGD(TAG, zwzw.c_str());
         Camera.SetBrightnessContrastSaturation(bri, con, sat);
         Camera.SetLEDIntensity(intens);
+        Camera.SetGrayscale(grayscale);
         ESP_LOGD(TAG, "test_take - vor TakeImage");
         std::string zw = flowctrl.doSingleStep("[TakeImage]", _host);
         httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");

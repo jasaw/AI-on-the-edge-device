@@ -80,9 +80,9 @@ static camera_config_t camera_config = {
     .ledc_channel = LEDC_CHANNEL_0,
 
     .pixel_format = PIXFORMAT_JPEG, //YUV422,GRAYSCALE,RGB565,JPEG
-    .frame_size = FRAMESIZE_VGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
-//    .frame_size = FRAMESIZE_UXGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
-    .jpeg_quality = 12, //0-63 lower number means higher quality
+    // .frame_size = FRAMESIZE_VGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
+    .frame_size = FRAMESIZE_UXGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
+    .jpeg_quality = 4, //0-63 lower number means higher quality
     .fb_count = 1,       //if more than one, i2s runs in continuous mode. Use only with JPEG
     .fb_location = CAMERA_FB_IN_PSRAM, /*!< The location where the frame buffer will be allocated */
     .grab_mode = CAMERA_GRAB_LATEST,      // only from new esp32cam version
@@ -226,31 +226,113 @@ bool CCamera::SetBrightnessContrastSaturation(int _brightness, int _contrast, in
 }
 
 
-void CCamera::SetQualitySize(int qual, framesize_t resol)
+/*
+* resolution = 0 \\ 1600 x 1200
+* resolution = 1 \\  800 x  600
+* resolution = 2 \\  400 x  296
+*/
+void CCamera::SetCamWindow(sensor_t *s, int resolution, int xOffset, int yOffset, int xLength, int yLength)
 {
-    qual = min(63, max(8, qual)); // Limit quality from 8..63 (values lower than 8 tent to be unstable)
-    
-    sensor_t * s = esp_camera_sensor_get();
-    if (s) {
-        s->set_quality(s, qual);    
-        s->set_framesize(s, resol);
-    }
-    else {
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "SetQualitySize: Failed to get control structure");
-    }
+    s->set_res_raw(s, resolution, 0, 0, 0, xOffset, yOffset, xLength, yLength, xLength, yLength, false, false);
+}
 
-    ActualResolution = resol;
-    ActualQuality = qual;
 
+void CCamera::SetImageWidthHeightFromResolution(framesize_t resol)
+{
     if (resol == FRAMESIZE_QVGA)
     {
         image_height = 240;
-        image_width = 320;             
+        image_width = 320;
     }
     else if (resol == FRAMESIZE_VGA)
     {
         image_height = 480;
-        image_width = 640;             
+        image_width = 640;
+    }
+    else if (resol == FRAMESIZE_SVGA)
+    {
+        image_height = 600;
+        image_width = 800;
+    }
+    else if (resol == FRAMESIZE_XGA)
+    {
+        image_height = 768;
+        image_width = 1024;
+    }
+    else if (resol == FRAMESIZE_HD)
+    {
+        image_height = 720;
+        image_width = 1280;
+    }
+    else if (resol == FRAMESIZE_SXGA)
+    {
+        image_height = 1024;
+        image_width = 1280;
+    }
+    else if (resol == FRAMESIZE_UXGA)
+    {
+        image_height = 1200;
+        image_width = 1600;
+    }
+}
+
+
+void CCamera::SetGrayscale(bool grayscale)
+{
+    imageGrayscale = grayscale;
+    sensor_t *s = esp_camera_sensor_get();
+    if (s) {
+        if (grayscale) {
+            s->set_special_effect(s, 2); // 0 to 6 (0 - No Effect, 1 - Negative, 2 - Grayscale, 3 - Red Tint, 4 - Green Tint, 5 - Blue Tint, 6 - Sepia)
+        } else {
+            s->set_special_effect(s, 0);
+        }
+    }
+}
+
+
+void CCamera::SetQualitySize(int qual, framesize_t resol, int zoom, int zoomOffsetX, int zoomOffsetY, bool grayscale)
+{
+    qual = min(63, max(8, qual)); // Limit quality from 8..63 (values lower than 8 tent to be unstable)
+    
+    ActualResolution = resol;
+    ActualQuality = qual;
+
+    imageZoom = zoom;
+    imageZoomOffsetX = zoomOffsetX;
+    imageZoomOffsetY = zoomOffsetY;
+    imageGrayscale = grayscale;
+
+    SetImageWidthHeightFromResolution(resol);
+
+    sensor_t * s = esp_camera_sensor_get();
+    if (s) {
+        // s->set_quality(s, qual);
+        // s->set_framesize(s, resol);
+        SetGrayscale(imageGrayscale);
+        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "set_res_raw: " + std::to_string(image_width) + "x" + std::to_string(image_height));
+        int z = imageZoom;
+        int x = imageZoomOffsetX;
+        int y = imageZoomOffsetY;
+        if (z > 1)
+            z = 1;
+        if (image_width >= 800 || image_height >= 600) {
+            z = 0;
+        }
+        int maxX = 1600 - image_width;
+        int maxY = 1200 - image_height;
+        if (z == 1) {
+            maxX = 800 - image_width;
+            maxY = 600 - image_height;
+        }
+        if (x > maxX)
+            x = maxX;
+        if (y > maxY)
+            y = maxY;
+        SetCamWindow(s, z, x, y, image_width, image_height);
+    }
+    else {
+        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "SetQualitySize: Failed to get control structure");
     }
 }
 
@@ -315,7 +397,7 @@ esp_err_t CCamera::CaptureToBasisImage(CImageBasis *_Image, int delay)
 	#endif
 
     camera_fb_t * fb = esp_camera_fb_get();
-    esp_camera_fb_return(fb);        
+    esp_camera_fb_return(fb);
     fb = esp_camera_fb_get();
     if (!fb) {
         LEDOnOff(false);
@@ -340,23 +422,43 @@ esp_err_t CCamera::CaptureToBasisImage(CImageBasis *_Image, int delay)
     else {
         LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "CaptureToBasisImage: Can't allocate _zwImage");
     }
-    esp_camera_fb_return(fb);        
+    esp_camera_fb_return(fb);
 
     #ifdef DEBUG_DETAIL_ON
         LogFile.WriteHeapInfo("CaptureToBasisImage - After fb_get");
     #endif
 
-    LEDOnOff(false);  
+    LEDOnOff(false);
 
     if (delay > 0) 
         LightOnOff(false);
  
-//    TickType_t xDelay = 1000 / portTICK_PERIOD_MS;     
+//    TickType_t xDelay = 1000 / portTICK_PERIOD_MS;
 //    vTaskDelay( xDelay );  // wait for power to recover
     
     #ifdef DEBUG_DETAIL_ON
         LogFile.WriteHeapInfo("CaptureToBasisImage - After LoadFromMemory");
     #endif
+
+    if (_zwImage == NULL) {
+        return ESP_OK;
+    }
+
+    if (_zwImage->getWidth() > image_width || _zwImage->getHeight() > image_height) {
+        int cropLeft = (_zwImage->getWidth() - image_width) / 2;
+        if (cropLeft < 0)
+            cropLeft = 0;
+        int cropRight = _zwImage->getWidth() - cropLeft - image_width;
+        if (cropRight < 0)
+            cropRight = 0;
+        int cropTop = (_zwImage->getHeight() - image_height) / 2;
+        if (cropTop < 0)
+            cropTop = 0;
+        int cropBottom = _zwImage->getHeight() - cropTop - image_height;
+        if (cropBottom < 0)
+            cropBottom = 0;
+        _zwImage->crop_image(cropLeft, cropRight, cropTop, cropBottom);
+    }
 
     stbi_uc* p_target;
     stbi_uc* p_source;    
@@ -375,9 +477,9 @@ esp_err_t CCamera::CaptureToBasisImage(CImageBasis *_Image, int delay)
         {
             p_target = _Image->rgb_image + (channels * (y * width + x));
             p_source = _zwImage->rgb_image + (channels * (y * width + x));
-            p_target[0] = p_source[0];
-            p_target[1] = p_source[1];
-            p_target[2] = p_source[2];
+            for (int c = 0; c < channels; c++) {
+                p_target[c] = p_source[c];
+            }
         }
 
     delete _zwImage;
@@ -386,7 +488,7 @@ esp_err_t CCamera::CaptureToBasisImage(CImageBasis *_Image, int delay)
         LogFile.WriteHeapInfo("CaptureToBasisImage - Done");
     #endif
 
-    return ESP_OK;    
+    return ESP_OK;
 }
 
 
@@ -394,7 +496,7 @@ esp_err_t CCamera::CaptureToFile(std::string nm, int delay)
 {
     string ftype;
 
-     LEDOnOff(true);              // Switched off to save power !
+    LEDOnOff(true);              // Switched off to save power !
 
     if (delay > 0) {
         LightOnOff(true);
@@ -414,7 +516,7 @@ esp_err_t CCamera::CaptureToFile(std::string nm, int delay)
 
         return ESP_FAIL;
     }
-    LEDOnOff(false);    
+    LEDOnOff(false);
 
     #ifdef DEBUG_DETAIL_ON    
         ESP_LOGD(TAG, "w %d, h %d, size %d", fb->width, fb->height, fb->len);
@@ -504,8 +606,7 @@ esp_err_t CCamera::CaptureToHTTP(httpd_req_t *req, int delay)
         return ESP_FAIL;
     }
 
-    LEDOnOff(false); 
-    
+    LEDOnOff(false);
     res = httpd_resp_set_type(req, "image/jpeg");
     if(res == ESP_OK){
         res = httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=raw.jpg");
@@ -662,48 +763,89 @@ void CCamera::LEDOnOff(bool status)
 }
 
 
-void CCamera::GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol)
+void CCamera::GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol, int &zoom, int &zoomOffsetX, int &zoomOffsetY, bool &grayscale)
 {
     char _query[100];
-    char _qual[10];
-    char _size[10];
+    char _value[10];
 
     resol = ActualResolution;
     qual = ActualQuality;
-
+    zoom = imageZoom;
+    zoomOffsetX = imageZoomOffsetX;
+    zoomOffsetY = imageZoomOffsetY;
+    grayscale = imageGrayscale;
 
     if (httpd_req_get_url_query_str(req, _query, 100) == ESP_OK)
     {
         ESP_LOGD(TAG, "Query: %s", _query);
-        if (httpd_query_key_value(_query, "size", _size, 10) == ESP_OK)
+        if (httpd_query_key_value(_query, "size", _value, sizeof(_value)) == ESP_OK)
         {
-            #ifdef DEBUG_DETAIL_ON   
+            #ifdef DEBUG_DETAIL_ON
             ESP_LOGD(TAG, "Size: %s", _size);
             #endif
-            if (strcmp(_size, "QVGA") == 0)
+            if (strcmp(_value, "QVGA") == 0)
                 resol = FRAMESIZE_QVGA;       // 320x240
-            else if (strcmp(_size, "VGA") == 0)
+            else if (strcmp(_value, "VGA") == 0)
                 resol = FRAMESIZE_VGA;      // 640x480
-            else if (strcmp(_size, "SVGA") == 0)
+            else if (strcmp(_value, "SVGA") == 0)
                 resol = FRAMESIZE_SVGA;     // 800x600
-            else if (strcmp(_size, "XGA") == 0)
+            else if (strcmp(_value, "XGA") == 0)
                 resol = FRAMESIZE_XGA;      // 1024x768
-            else if (strcmp(_size, "SXGA") == 0)
+            else if (strcmp(_value, "SXGA") == 0)
                 resol = FRAMESIZE_SXGA;     // 1280x1024
-            else if (strcmp(_size, "UXGA") == 0)
+            else if (strcmp(_value, "UXGA") == 0)
                  resol = FRAMESIZE_UXGA;     // 1600x1200   
         }
-        if (httpd_query_key_value(_query, "quality", _qual, 10) == ESP_OK)
+        if (httpd_query_key_value(_query, "quality", _value, sizeof(_value)) == ESP_OK)
         {
-            #ifdef DEBUG_DETAIL_ON   
+            #ifdef DEBUG_DETAIL_ON
             ESP_LOGD(TAG, "Quality: %s", _qual);
             #endif
-            qual = atoi(_qual);
-                
+            qual = atoi(_value);
             if (qual > 63)      // Limit to max. 63
                 qual = 63;
             else if (qual < 8)  // Limit to min. 8
                 qual = 8;
+        }
+        if (httpd_query_key_value(_query, "zm", _value, sizeof(_value)) == ESP_OK)
+        {
+            #ifdef DEBUG_DETAIL_ON
+            ESP_LOGD(TAG, "Zoom: %s", _value);
+            #endif
+            zoom = atoi(_value);
+            if (zoom > 2)
+                zoom = 2;
+            else if (zoom < 0)
+                zoom = 0;
+        }
+        if (httpd_query_key_value(_query, "x", _value, sizeof(_value)) == ESP_OK)
+        {
+            #ifdef DEBUG_DETAIL_ON
+            ESP_LOGD(TAG, "X offset: %s", _value);
+            #endif
+            zoomOffsetX = atoi(_value);
+            if (zoomOffsetX < 0)
+                zoomOffsetX = 0;
+        }
+        if (httpd_query_key_value(_query, "y", _value, sizeof(_value)) == ESP_OK)
+        {
+            #ifdef DEBUG_DETAIL_ON
+            ESP_LOGD(TAG, "Y offset: %s", _value);
+            #endif
+            zoomOffsetY = atoi(_value);
+            if (zoomOffsetY < 0)
+                zoomOffsetY = 0;
+        }
+        if (httpd_query_key_value(_query, "gray", _value, sizeof(_value)) == ESP_OK)
+        {
+            #ifdef DEBUG_DETAIL_ON
+            ESP_LOGD(TAG, "Grayscale: %s", _value);
+            #endif
+            int gray = atoi(_value);
+            if (gray != 0)
+                grayscale = true;
+            else
+                grayscale = false;
         }
     }
 }

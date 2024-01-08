@@ -50,6 +50,14 @@ void ClassFlowTakeImage::SetInitialParameter(void)
     ImageQuality = 5;
     rawImage = NULL;
     ImageSize = FRAMESIZE_VGA;
+    ImageZoom = 0;
+    zoomOffsetX = 0;
+    zoomOffsetY = 0;
+#ifdef GRAYSCALE_AS_DEFAULT
+    ImageGrayscale = true;
+#else
+    ImageGrayscale = false;
+#endif
     SaveAllFiles = false;
     disabled = false;
     FixedExposure = false;
@@ -91,6 +99,20 @@ bool ClassFlowTakeImage::ReadParameter(FILE* pfile, string& aktparamgraph)
         }
         if ((toUpper(splitted[0]) == "IMAGEQUALITY") && (splitted.size() > 1))
             ImageQuality = std::stod(splitted[1]);
+
+        if ((toUpper(splitted[0]) == "IMAGEZOOM") && (splitted.size() > 1))
+            ImageZoom = std::stod(splitted[1]);
+        if ((toUpper(splitted[0]) == "IMAGEZOOMOFFSETX") && (splitted.size() > 1))
+            zoomOffsetX = std::stod(splitted[1]);
+        if ((toUpper(splitted[0]) == "IMAGEZOOMOFFSETY") && (splitted.size() > 1))
+            zoomOffsetY = std::stod(splitted[1]);
+        if ((toUpper(splitted[0]) == "IMAGEGRAYSCALE") && (splitted.size() > 1))
+        {
+            if (toUpper(splitted[1]) == "TRUE")
+                ImageGrayscale = true;
+            else if (toUpper(splitted[1]) == "FALSE")
+                ImageGrayscale = false;
+        }
 
         if ((toUpper(splitted[0]) == "IMAGESIZE") && (splitted.size() > 1))
         {
@@ -151,7 +173,7 @@ bool ClassFlowTakeImage::ReadParameter(FILE* pfile, string& aktparamgraph)
     }
 
     Camera.SetBrightnessContrastSaturation(_brightness, _contrast, _saturation);
-    Camera.SetQualitySize(ImageQuality, ImageSize);
+    Camera.SetQualitySize(ImageQuality, ImageSize, ImageZoom, zoomOffsetX, zoomOffsetY, ImageGrayscale);
 
     image_width = Camera.image_width;
     image_height = Camera.image_height;

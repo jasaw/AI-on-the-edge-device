@@ -31,8 +31,19 @@ class CCamera {
         bool loadNextDemoImage(camera_fb_t *fb);
         long GetFileSize(std::string filename);
 
+        void SetCamWindow(sensor_t *s, int resolution, int xOffset, int yOffset, int xLength, int yLength);
+        void SetImageWidthHeightFromResolution(framesize_t resol);
+
     public:
         int image_height, image_width;
+        int imageZoom = 0;
+        int imageZoomOffsetX = 0;
+        int imageZoomOffsetY = 0;
+    #ifdef GRAYSCALE_AS_DEFAULT
+        bool imageGrayscale = true;
+    #else
+        bool imageGrayscale = false;
+    #endif
         
         CCamera();
         esp_err_t InitCam();
@@ -41,9 +52,10 @@ class CCamera {
         void LEDOnOff(bool status);
         esp_err_t CaptureToHTTP(httpd_req_t *req, int delay = 0);
         esp_err_t CaptureToStream(httpd_req_t *req, bool FlashlightOn);
-        void SetQualitySize(int qual, framesize_t resol);
+        void SetQualitySize(int qual, framesize_t resol, int zoom, int zoomOffsetX, int zoomOffsetY, bool grayscale);
         bool SetBrightnessContrastSaturation(int _brightness, int _contrast, int _saturation);
-        void GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol);
+        void SetGrayscale(bool grayscale);
+        void GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol, int &zoom, int &zoomOffsetX, int &zoomOffsetY, bool &grayscale);
         void SetLEDIntensity(float _intrel);
         bool testCamera(void);
         void EnableAutoExposure(int flash_duration);
