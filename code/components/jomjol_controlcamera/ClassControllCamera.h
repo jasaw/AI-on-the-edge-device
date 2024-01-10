@@ -19,7 +19,7 @@ class CCamera {
     protected:
         int ActualQuality;
         framesize_t ActualResolution;
-        int brightness, contrast, saturation;
+        int brightness, contrast, saturation, autoExposureLevel;
         bool isFixedExposure;
         int waitbeforepicture_org;
         int led_intensity = 4095;
@@ -36,7 +36,8 @@ class CCamera {
 
     public:
         int image_height, image_width;
-        int imageZoom = 0;
+        bool imageZoomEnabled = false;
+        int imageZoomMode = 0;
         int imageZoomOffsetX = 0;
         int imageZoomOffsetY = 0;
     #ifdef GRAYSCALE_AS_DEFAULT
@@ -52,10 +53,10 @@ class CCamera {
         void LEDOnOff(bool status);
         esp_err_t CaptureToHTTP(httpd_req_t *req, int delay = 0);
         esp_err_t CaptureToStream(httpd_req_t *req, bool FlashlightOn);
-        void SetQualitySize(int qual, framesize_t resol, int zoom, int zoomOffsetX, int zoomOffsetY, bool grayscale);
-        bool SetBrightnessContrastSaturation(int _brightness, int _contrast, int _saturation);
-        void SetGrayscale(bool grayscale);
-        void GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol, int &zoom, int &zoomOffsetX, int &zoomOffsetY, bool &grayscale);
+        void SetQualitySize(int qual, framesize_t resol, bool zoomEnabled, int zoomMode, int zoomOffsetX, int zoomOffsetY);
+        bool SetBrightnessContrastSaturation(int _brightness, int _contrast, int _saturation, int _autoExposureLevel, bool _grayscale);
+        void SetZoom(bool zoomEnabled, int zoomMode, int zoomOffsetX, int zoomOffsetY);
+        void GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol, bool &zoomEnabled, int &zoomMode, int &zoomOffsetX, int &zoomOffsetY);
         void SetLEDIntensity(float _intrel);
         bool testCamera(void);
         void EnableAutoExposure(int flash_duration);

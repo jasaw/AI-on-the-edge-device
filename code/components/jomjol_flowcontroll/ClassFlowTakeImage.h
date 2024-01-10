@@ -17,7 +17,8 @@ protected:
     float waitbeforepicture_store;
     framesize_t ImageSize;
     bool isImageSize;
-    int ImageZoom = 0;
+    bool ZoomEnabled = false;
+    int ZoomMode = 0;
     int zoomOffsetX = 0;
     int zoomOffsetY = 0;
     bool ImageGrayscale;

@@ -50,7 +50,8 @@ void ClassFlowTakeImage::SetInitialParameter(void)
     ImageQuality = 5;
     rawImage = NULL;
     ImageSize = FRAMESIZE_VGA;
-    ImageZoom = 0;
+    ZoomEnabled = false;
+    ZoomMode = 0;
     zoomOffsetX = 0;
     zoomOffsetY = 0;
 #ifdef GRAYSCALE_AS_DEFAULT
@@ -81,6 +82,7 @@ bool ClassFlowTakeImage::ReadParameter(FILE* pfile, string& aktparamgraph)
     int _brightness = -100;
     int _contrast = -100;
     int _saturation = -100;
+    int _autoExposureLevel = 0;
 
     if (aktparamgraph.size() == 0)
         if (!this->GetNextParagraph(pfile, aktparamgraph))
@@ -100,19 +102,28 @@ bool ClassFlowTakeImage::ReadParameter(FILE* pfile, string& aktparamgraph)
         if ((toUpper(splitted[0]) == "IMAGEQUALITY") && (splitted.size() > 1))
             ImageQuality = std::stod(splitted[1]);
 
-        if ((toUpper(splitted[0]) == "IMAGEZOOM") && (splitted.size() > 1))
-            ImageZoom = std::stod(splitted[1]);
-        if ((toUpper(splitted[0]) == "IMAGEZOOMOFFSETX") && (splitted.size() > 1))
+        if ((toUpper(splitted[0]) == "ZOOM") && (splitted.size() > 1))
+        {
+            if (toUpper(splitted[1]) == "TRUE")
+                ZoomEnabled = true;
+            else if (toUpper(splitted[1]) == "FALSE")
+                ZoomEnabled = false;
+        }
+        if ((toUpper(splitted[0]) == "ZOOMMODE") && (splitted.size() > 1))
+            ZoomMode = std::stod(splitted[1]);
+        if ((toUpper(splitted[0]) == "ZOOMOFFSETX") && (splitted.size() > 1))
             zoomOffsetX = std::stod(splitted[1]);
-        if ((toUpper(splitted[0]) == "IMAGEZOOMOFFSETY") && (splitted.size() > 1))
+        if ((toUpper(splitted[0]) == "ZOOMOFFSETY") && (splitted.size() > 1))
             zoomOffsetY = std::stod(splitted[1]);
-        if ((toUpper(splitted[0]) == "IMAGEGRAYSCALE") && (splitted.size() > 1))
+        if ((toUpper(splitted[0]) == "GRAYSCALE") && (splitted.size() > 1))
         {
             if (toUpper(splitted[1]) == "TRUE")
                 ImageGrayscale = true;
             else if (toUpper(splitted[1]) == "FALSE")
                 ImageGrayscale = false;
         }
+        if ((toUpper(splitted[0]) == "AUTOEXPOSURELEVEL") && (splitted.size() > 1))
+            _autoExposureLevel = std::stod(splitted[1]);
 
         if ((toUpper(splitted[0]) == "IMAGESIZE") && (splitted.size() > 1))
         {
@@ -172,8 +183,8 @@ bool ClassFlowTakeImage::ReadParameter(FILE* pfile, string& aktparamgraph)
         }
     }
 
-    Camera.SetBrightnessContrastSaturation(_brightness, _contrast, _saturation);
-    Camera.SetQualitySize(ImageQuality, ImageSize, ImageZoom, zoomOffsetX, zoomOffsetY, ImageGrayscale);
+    Camera.SetBrightnessContrastSaturation(_brightness, _contrast, _saturation, _autoExposureLevel, ImageGrayscale);
+    Camera.SetQualitySize(ImageQuality, ImageSize, ZoomEnabled, ZoomMode, zoomOffsetX, zoomOffsetY);
 
     image_width = Camera.image_width;
     image_height = Camera.image_height;

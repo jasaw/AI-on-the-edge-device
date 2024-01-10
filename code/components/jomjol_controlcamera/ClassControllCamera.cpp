@@ -53,6 +53,10 @@ static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" 
 static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
 static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
 
+// OV Camera SDE Indirect Register Access
+#define OV_IRA_BPADDR               0x7C
+#define OV_IRA_BPDATA               0x7D
+
 
 static camera_config_t camera_config = {
     .pin_pwdn = CAM_PIN_PWDN,
@@ -80,8 +84,8 @@ static camera_config_t camera_config = {
     .ledc_channel = LEDC_CHANNEL_0,
 
     .pixel_format = PIXFORMAT_JPEG, //YUV422,GRAYSCALE,RGB565,JPEG
-    // .frame_size = FRAMESIZE_VGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
-    .frame_size = FRAMESIZE_UXGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
+    .frame_size = FRAMESIZE_VGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
+    // .frame_size = FRAMESIZE_UXGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
     .jpeg_quality = 4, //0-63 lower number means higher quality
     .fb_count = 1,       //if more than one, i2s runs in continuous mode. Use only with JPEG
     .fb_location = CAMERA_FB_IN_PSRAM, /*!< The location where the frame buffer will be allocated */
@@ -166,7 +170,7 @@ static size_t jpg_encode_stream(void * arg, size_t index, const void* data, size
 }
 
 
-bool CCamera::SetBrightnessContrastSaturation(int _brightness, int _contrast, int _saturation)
+bool CCamera::SetBrightnessContrastSaturation(int _brightness, int _contrast, int _saturation, int _autoExposureLevel, bool _grayscale)
 {
     _brightness = min(2, max(-2, _brightness));
     _contrast = min(2, max(-2, _contrast));
@@ -174,6 +178,11 @@ bool CCamera::SetBrightnessContrastSaturation(int _brightness, int _contrast, in
 
     sensor_t * s = esp_camera_sensor_get();
     if (s) {
+        // auto exposure controls
+        s->set_ae_level(s, _autoExposureLevel); // -2 to 2
+        s->set_gainceiling(s, GAINCEILING_2X); // GAINCEILING_2X 4X 8X 16X 32X 64X 128X
+
+        // post processing
         s->set_saturation(s, _saturation);
         s->set_contrast(s, _contrast);
         s->set_brightness(s, _brightness);
@@ -205,9 +214,23 @@ bool CCamera::SetBrightnessContrastSaturation(int _brightness, int _contrast, in
 
         //s->set_reg(s, 0x7C, 0xFF, 2); // Optional feature - hue setting: Select byte 2 in register 0x7C to set hue value
         //s->set_reg(s, 0x7D, 0xFF, 0); // Optional feature - hue setting: Hue value 0 - 255
-        s->set_reg(s, 0xFF, 0x01, 0); // Select DSP bank
-        s->set_reg(s, 0x7C, 0xFF, 0); // Select byte 0 in register 0x7C
-        s->set_reg(s, 0x7D, 7, 7); // Set bit 0, 1, 2 in register 0x7D to enable saturation, contrast, brightness and hue control
+        if (_grayscale) {
+            // Indirect register access
+            s->set_reg(s, 0xFF, 0x01, 0); // Select DSP bank
+            s->set_reg(s, OV_IRA_BPADDR, 0xFF, 0x00); // Address 0x00
+            s->set_reg(s, OV_IRA_BPDATA, 0xFF, 0x1F); // Set bit 0, 1, 2 to enable saturation, contrast, brightness and hue control
+            s->set_reg(s, OV_IRA_BPADDR, 0xFF, 0x05); // Address 0x05
+            s->set_reg(s, OV_IRA_BPDATA, 0xFF, 0x80);
+            s->set_reg(s, OV_IRA_BPDATA, 0xFF, 0x80);
+        } else {
+            // Indirect register access
+            s->set_reg(s, 0xFF, 0x01, 0); // Select DSP bank
+            s->set_reg(s, OV_IRA_BPADDR, 0xFF, 0x00); // Address 0x00
+            s->set_reg(s, OV_IRA_BPDATA, 0xFF, 7); // Set bit 0, 1, 2 to enable saturation, contrast, brightness and hue control
+            s->set_reg(s, OV_IRA_BPADDR, 0xFF, 0x05); // Address 0x05
+            s->set_reg(s, OV_IRA_BPDATA, 0xFF, 0x80);
+            s->set_reg(s, OV_IRA_BPDATA, 0xFF, 0x80);
+        }
     }
     else {
         LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "SetBrightnessContrastSaturation: Failed to get control structure");
@@ -219,8 +242,10 @@ bool CCamera::SetBrightnessContrastSaturation(int _brightness, int _contrast, in
     brightness = _brightness;
     contrast = _contrast;
     saturation = _saturation;
+    autoExposureLevel = _autoExposureLevel;
+    imageGrayscale = _grayscale;
 
-    ESP_LOGD(TAG, "brightness %d, contrast: %d, saturation %d", brightness, contrast, saturation);
+    ESP_LOGD(TAG, "brightness %d, contrast: %d, saturation %d, autoExposureLevel %d, grayscale %d", brightness, contrast, saturation, autoExposureLevel, (int)imageGrayscale);
 
     return true;
 }
@@ -277,59 +302,60 @@ void CCamera::SetImageWidthHeightFromResolution(framesize_t resol)
 }
 
 
-void CCamera::SetGrayscale(bool grayscale)
+void CCamera::SetZoom(bool zoomEnabled, int zoomMode, int zoomOffsetX, int zoomOffsetY)
 {
-    imageGrayscale = grayscale;
+    imageZoomEnabled = zoomEnabled;
+    imageZoomMode = zoomMode;
+    imageZoomOffsetX = zoomOffsetX;
+    imageZoomOffsetY = zoomOffsetY;
+
     sensor_t *s = esp_camera_sensor_get();
     if (s) {
-        if (grayscale) {
-            s->set_special_effect(s, 2); // 0 to 6 (0 - No Effect, 1 - Negative, 2 - Grayscale, 3 - Red Tint, 4 - Green Tint, 5 - Blue Tint, 6 - Sepia)
+        if (imageZoomEnabled) {
+            int z = imageZoomMode;
+            int x = imageZoomOffsetX;
+            int y = imageZoomOffsetY;
+            if (z > 1)
+                z = 1;
+            if (image_width >= 800 || image_height >= 600) {
+                z = 0;
+            }
+            int maxX = 1600 - image_width;
+            int maxY = 1200 - image_height;
+            if (z == 1) {
+                maxX = 800 - image_width;
+                maxY = 600 - image_height;
+            }
+            if (x > maxX)
+                x = maxX;
+            if (y > maxY)
+                y = maxY;
+            SetCamWindow(s, z, x, y, image_width, image_height);
         } else {
-            s->set_special_effect(s, 0);
+            s->set_framesize(s, ActualResolution);
         }
     }
 }
 
 
-void CCamera::SetQualitySize(int qual, framesize_t resol, int zoom, int zoomOffsetX, int zoomOffsetY, bool grayscale)
+void CCamera::SetQualitySize(int qual, framesize_t resol, bool zoomEnabled, int zoomMode, int zoomOffsetX, int zoomOffsetY)
 {
     qual = min(63, max(8, qual)); // Limit quality from 8..63 (values lower than 8 tent to be unstable)
     
     ActualResolution = resol;
     ActualQuality = qual;
 
-    imageZoom = zoom;
+    imageZoomEnabled = zoomEnabled;
+    imageZoomMode = zoomMode;
     imageZoomOffsetX = zoomOffsetX;
     imageZoomOffsetY = zoomOffsetY;
-    imageGrayscale = grayscale;
 
     SetImageWidthHeightFromResolution(resol);
 
     sensor_t * s = esp_camera_sensor_get();
     if (s) {
-        // s->set_quality(s, qual);
-        // s->set_framesize(s, resol);
-        SetGrayscale(imageGrayscale);
-        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "set_res_raw: " + std::to_string(image_width) + "x" + std::to_string(image_height));
-        int z = imageZoom;
-        int x = imageZoomOffsetX;
-        int y = imageZoomOffsetY;
-        if (z > 1)
-            z = 1;
-        if (image_width >= 800 || image_height >= 600) {
-            z = 0;
-        }
-        int maxX = 1600 - image_width;
-        int maxY = 1200 - image_height;
-        if (z == 1) {
-            maxX = 800 - image_width;
-            maxY = 600 - image_height;
-        }
-        if (x > maxX)
-            x = maxX;
-        if (y > maxY)
-            y = maxY;
-        SetCamWindow(s, z, x, y, image_width, image_height);
+        s->set_quality(s, qual);
+        SetZoom(zoomEnabled, zoomMode, zoomOffsetX, zoomOffsetY);
     }
     else {
         LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "SetQualitySize: Failed to get control structure");
@@ -763,17 +789,17 @@ void CCamera::LEDOnOff(bool status)
 }
 
 
-void CCamera::GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol, int &zoom, int &zoomOffsetX, int &zoomOffsetY, bool &grayscale)
+void CCamera::GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol, bool &zoomEnabled, int &zoomMode, int &zoomOffsetX, int &zoomOffsetY)
 {
     char _query[100];
     char _value[10];
 
     resol = ActualResolution;
     qual = ActualQuality;
-    zoom = imageZoom;
+    zoomEnabled = imageZoomEnabled;
+    zoomMode = imageZoomMode;
     zoomOffsetX = imageZoomOffsetX;
     zoomOffsetY = imageZoomOffsetY;
-    grayscale = imageGrayscale;
 
     if (httpd_req_get_url_query_str(req, _query, 100) == ESP_OK)
     {
@@ -807,16 +833,26 @@ void CCamera::GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol
             else if (qual < 8)  // Limit to min. 8
                 qual = 8;
         }
-        if (httpd_query_key_value(_query, "zm", _value, sizeof(_value)) == ESP_OK)
+        if (httpd_query_key_value(_query, "z", _value, sizeof(_value)) == ESP_OK)
         {
             #ifdef DEBUG_DETAIL_ON
             ESP_LOGD(TAG, "Zoom: %s", _value);
             #endif
-            zoom = atoi(_value);
-            if (zoom > 2)
-                zoom = 2;
-            else if (zoom < 0)
-                zoom = 0;
+            if (atoi(_value) != 0)
+                zoomEnabled = true;
+            else
+                zoomEnabled = false;
+        }
+        if (httpd_query_key_value(_query, "zm", _value, sizeof(_value)) == ESP_OK)
+        {
+            #ifdef DEBUG_DETAIL_ON
+            ESP_LOGD(TAG, "Zoom mode: %s", _value);
+            #endif
+            zoomMode = atoi(_value);
+            if (zoomMode > 2)
+                zoomMode = 2;
+            else if (zoomMode < 0)
+                zoomMode = 0;
         }
         if (httpd_query_key_value(_query, "x", _value, sizeof(_value)) == ESP_OK)
         {
@@ -835,17 +871,6 @@ void CCamera::GetCameraParameter(httpd_req_t *req, int &qual, framesize_t &resol
             zoomOffsetY = atoi(_value);
             if (zoomOffsetY < 0)
                 zoomOffsetY = 0;
-        }
-        if (httpd_query_key_value(_query, "gray", _value, sizeof(_value)) == ESP_OK)
-        {
-            #ifdef DEBUG_DETAIL_ON
-            ESP_LOGD(TAG, "Grayscale: %s", _value);
-            #endif
-            int gray = atoi(_value);
-            if (gray != 0)
-                grayscale = true;
-            else
-                grayscale = false;
         }
     }
 }
