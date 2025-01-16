@@ -65,7 +65,7 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
 
 //    ESP_LOGD(TAG, "FindTemplate 02");
 
-    if ((_ref->alignment_algo == 2) && (_ref->fastalg_x > -1) && (_ref->fastalg_y > -1))     // für Testzwecke immer Berechnen
+    if (((_ref->alignment_algo == 2) || (_ref->alignment_algo == 4)) && (_ref->fastalg_x > -1) && (_ref->fastalg_y > -1))     // für Testzwecke immer Berechnen
     {
         isSimilar = CalculateSimularities(rgb_template, _ref->fastalg_x, _ref->fastalg_y, ow, oh, min, avg, max, SAD, _ref->fastalg_SAD, _ref->fastalg_SAD_criteria);
 /*#ifdef DEBUG_DETAIL_ON
@@ -130,7 +130,7 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
 //    ESP_LOGD(TAG, "FindTemplate 06");
 
 
-    if (_ref->alignment_algo == 2)
+    if ((_ref->alignment_algo == 2) || (_ref->alignment_algo == 4))
         CalculateSimularities(rgb_template, _ref->found_x, _ref->found_y, ow, oh, min, avg, max, SAD, _ref->fastalg_SAD, _ref->fastalg_SAD_criteria);
 
 
