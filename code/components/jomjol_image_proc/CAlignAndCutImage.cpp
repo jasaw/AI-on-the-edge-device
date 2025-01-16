@@ -57,36 +57,53 @@ bool CAlignAndCutImage::Align(RefInfo *_temp1, RefInfo *_temp2)
 
     delete ft;
 
+    if ((_temp1->alignment_algo == 3) || (_temp1->alignment_algo == 4))
+    {
+        dx = (_temp1->target_x - _temp1->found_x + _temp2->target_x - _temp2->found_x) / 2;
+        dy = (_temp1->target_y - _temp1->found_y + _temp2->target_y - _temp2->found_y) / 2;
 
-    dx = _temp1->target_x - _temp1->found_x;
-    dy = _temp1->target_y - _temp1->found_y;
+        r0_x += dx;
+        r0_y += dy;
 
-    r0_x += dx;
-    r0_y += dy;
+        r1_x += dx;
+        r1_y += dy;
 
-    r1_x += dx;
-    r1_y += dy;
+        CRotateImage rt("Align", this, ImageTMP);
+        rt.Translate(dx, dy);
+        ESP_LOGD(TAG, "Alignment: dx %d - dy %d", dx, dy);
+    }
+    else
+    {
+        dx = _temp1->target_x - _temp1->found_x;
+        dy = _temp1->target_y - _temp1->found_y;
 
-    float w_org, w_ist, d_winkel;
+        r0_x += dx;
+        r0_y += dy;
 
-    w_org = atan2(_temp2->found_y - _temp1->found_y, _temp2->found_x - _temp1->found_x);
-    w_ist = atan2(r1_y - r0_y, r1_x - r0_x);
+        r1_x += dx;
+        r1_y += dy;
 
-    d_winkel = (w_ist - w_org) * 180 / M_PI;
+        float w_org, w_ist, d_winkel;
 
-/*#ifdef DEBUG_DETAIL_ON
-    std::string zw = "\tdx:\t" + std::to_string(dx) + "\tdy:\t" + std::to_string(dy) + "\td_winkel:\t" + std::to_string(d_winkel);
-    zw = zw + "\tt1_x_y:\t" + std::to_string(_temp1->found_x) + "\t" + std::to_string(_temp1->found_y);
-    zw = zw + "\tpara1_found_min_avg_max_SAD:\t" + std::to_string(_temp1->fastalg_min) + "\t" + std::to_string(_temp1->fastalg_avg) + "\t" + std::to_string(_temp1->fastalg_max) + "\t"+ std::to_string(_temp1->fastalg_SAD);
-    zw = zw + "\tt2_x_y:\t" + std::to_string(_temp2->found_x) + "\t" + std::to_string(_temp2->found_y);
-    zw = zw + "\tpara2_found_min_avg_max:\t" + std::to_string(_temp2->fastalg_min) + "\t" + std::to_string(_temp2->fastalg_avg) + "\t" + std::to_string(_temp2->fastalg_max) + "\t"+ std::to_string(_temp2->fastalg_SAD);
-    LogFile.WriteToDedicatedFile("/sdcard/alignment.txt", zw);
-#endif*/
+        w_org = atan2(_temp2->found_y - _temp1->found_y, _temp2->found_x - _temp1->found_x);
+        w_ist = atan2(r1_y - r0_y, r1_x - r0_x);
 
-    CRotateImage rt("Align", this, ImageTMP);
-    rt.Translate(dx, dy);
-    rt.Rotate(d_winkel, _temp1->target_x, _temp1->target_y);
-    ESP_LOGD(TAG, "Alignment: dx %d - dy %d - rot %f", dx, dy, d_winkel);
+        d_winkel = (w_ist - w_org) * 180 / M_PI;
+
+    /*#ifdef DEBUG_DETAIL_ON
+        std::string zw = "\tdx:\t" + std::to_string(dx) + "\tdy:\t" + std::to_string(dy) + "\td_winkel:\t" + std::to_string(d_winkel);
+        zw = zw + "\tt1_x_y:\t" + std::to_string(_temp1->found_x) + "\t" + std::to_string(_temp1->found_y);
+        zw = zw + "\tpara1_found_min_avg_max_SAD:\t" + std::to_string(_temp1->fastalg_min) + "\t" + std::to_string(_temp1->fastalg_avg) + "\t" + std::to_string(_temp1->fastalg_max) + "\t"+ std::to_string(_temp1->fastalg_SAD);
+        zw = zw + "\tt2_x_y:\t" + std::to_string(_temp2->found_x) + "\t" + std::to_string(_temp2->found_y);
+        zw = zw + "\tpara2_found_min_avg_max:\t" + std::to_string(_temp2->fastalg_min) + "\t" + std::to_string(_temp2->fastalg_avg) + "\t" + std::to_string(_temp2->fastalg_max) + "\t"+ std::to_string(_temp2->fastalg_SAD);
+        LogFile.WriteToDedicatedFile("/sdcard/alignment.txt", zw);
+    #endif*/
+
+        CRotateImage rt("Align", this, ImageTMP);
+        rt.Translate(dx, dy);
+        rt.Rotate(d_winkel, _temp1->target_x, _temp1->target_y);
+        ESP_LOGD(TAG, "Alignment: dx %d - dy %d - rot %f", dx, dy, d_winkel);
+    }
 
     return (isSimilar1 && isSimilar2);
 }
