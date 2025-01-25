@@ -131,9 +131,15 @@ bool ClassFlowAlignment::ReadParameter(FILE *pfile, string &aktparamgraph)
             if (toUpper(splitted[1]) == "FAST") {
                 alg_algo = 2;
             }
-            if (toUpper(splitted[1]) == "OFF") {
-                // no align algo if set to 3 = off => no draw ref //add disable aligment algo |01.2023
+            if (toUpper(splitted[1]) == "SHIFTHIGHACCURACY") {
                 alg_algo = 3;
+            }
+            if (toUpper(splitted[1]) == "SHIFTFAST") {
+                alg_algo = 4;
+            }
+            if (toUpper(splitted[1]) == "OFF") {
+                // no align algo if set to 5 = off => no draw ref //add disable aligment algo |01.2023
+                alg_algo = 5;
             }
         }
     }
@@ -149,8 +155,8 @@ bool ClassFlowAlignment::ReadParameter(FILE *pfile, string &aktparamgraph)
 #endif
     }
 
-    // no align algo if set to 3 = off => no draw ref //add disable aligment algo |01.2023
-    if (References[0].alignment_algo != 3) {
+    // no align algo if set to 5 = off => no draw ref //add disable aligment algo |01.2023
+    if (References[0].alignment_algo != 5) {
         return LoadReferenceAlignmentValues();
     }
 
@@ -229,8 +235,8 @@ bool ClassFlowAlignment::doFlow(string time)
         }
     }
 
-    // no align algo if set to 3 = off //add disable aligment algo |01.2023
-    if (References[0].alignment_algo != 3) {
+    // no align algo if set to 5 = off //add disable aligment algo |01.2023
+    if (References[0].alignment_algo != 5) {
         if (!AlignAndCutImage->Align(&References[0], &References[1])) {
             SaveReferenceAlignmentValues();
         }
@@ -238,8 +244,8 @@ bool ClassFlowAlignment::doFlow(string time)
 
 #ifdef ALGROI_LOAD_FROM_MEM_AS_JPG
     if (AlgROI) {
-        // no align algo if set to 3 = off => no draw ref //add disable aligment algo |01.2023
-        if (References[0].alignment_algo != 3) {
+        // no align algo if set to 5 = off => no draw ref //add disable aligment algo |01.2023
+        if (References[0].alignment_algo != 5) {
             DrawRef(ImageTMP);
         }
 
@@ -258,8 +264,8 @@ bool ClassFlowAlignment::doFlow(string time)
     delete ImageTMP;
     ImageTMP = NULL;
 
-    // no align algo if set to 3 = off => no draw ref //add disable aligment algo |01.2023
-    if (References[0].alignment_algo != 3) {
+    // no align algo if set to 5 = off => no draw ref //add disable aligment algo |01.2023
+    if (References[0].alignment_algo != 5) {
         return LoadReferenceAlignmentValues();
     }
 
