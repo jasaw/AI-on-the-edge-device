@@ -24,7 +24,7 @@ uint8_t CFindTemplate::scan_find_template(struct RefInfo *ref, uint8_t* rgb_temp
     if (channels != 3)
         return 0;
 
-    const uint64_t critSAD = 2000;
+    const uint64_t critSAD = 0x2000;
     int ow_start, ow_stop;
     int oh_start, oh_stop;
     unsigned char *img = rgb_image;
