@@ -532,6 +532,11 @@ bool ClassFlowTakeImage::ReadParameter(FILE *pfile, string &aktparamgraph)
             }
         }
 
+        else if ((toUpper(splitted[0]) == "NORMALIZE") && (splitted.size() > 1))
+        {
+            CCstatus.CamConfig.CameraNormalize = alphanumericToBoolean(splitted[1]);
+        }
+
         else if ((toUpper(splitted[0]) == "DEMO") && (splitted.size() > 1))
         {
             CCstatus.DemoMode = alphanumericToBoolean(splitted[1]);

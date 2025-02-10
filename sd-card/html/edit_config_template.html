@@ -722,6 +722,21 @@
 			<td>$TOOLTIP_TakeImage_LEDIntensity</td>
 		</tr>
 		
+		<tr class="expert" unused_id="TakeImage_Normalize_ex3">
+			<td class="indent1">
+				<label>
+					<class id="TakeImage_Normalize_text" style="color:black;">Normalize image</class>
+				</label>
+			</td>
+			<td>
+				<select id="TakeImage_Normalize_value1">
+					<option value="true">enable (true)</option>
+					<option value="false" selected>disable (false)</option>
+				</select>
+			</td>
+			<td>$TOOLTIP_TakeImage_Normalize</td>
+		</tr>
+
 		<tr class="expert" unused_id="TakeImage_Demo_ex3">
 			<td class="indent1">
 				<label>
@@ -775,7 +790,6 @@
 					<option value="highAccuracy" >HighAccuracy</option>
 					<option value="fast" >Fast</option>
 					<option value="shifthighAccuracy" >Shift only HighAccuracy</option>
-					<option value="shiftfast" >Shift only Fast</option>
 					<option value="off" >Off</option><!-- add disable aligment algo |01.2023 -->
 				</select>
 			</td>
@@ -2415,6 +2429,7 @@ function UpdateInput() {
     WriteParameter(param, category, "TakeImage", "CamFocusAuto", false);
     WriteParameter(param, category, "TakeImage", "CamFocusManualLevel", false);
     WriteParameter(param, category, "TakeImage", "LEDIntensity", false);
+    WriteParameter(param, category, "TakeImage", "Normalize", false);
     WriteParameter(param, category, "TakeImage", "Demo", false);
 	
     WriteParameter(param, category, "Alignment", "SearchFieldX", false);		
@@ -2585,6 +2600,7 @@ function ReadParameterAll() {
     ReadParameter(param, "TakeImage", "CamFocusAuto", false);
     ReadParameter(param, "TakeImage", "CamFocusManualLevel", false);
     ReadParameter(param, "TakeImage", "LEDIntensity", false);	
+    ReadParameter(param, "TakeImage", "Normalize", false);
     ReadParameter(param, "TakeImage", "Demo", false);	
 
     ReadParameter(param, "Alignment", "SearchFieldX", false);	
@@ -2905,6 +2921,14 @@ function camSettingsSet(){
     var _zoomy_temp = document.getElementById("TakeImage_CamZoomOffsetY_value1").value;
     var _zooms_temp = document.getElementById("TakeImage_CamZoomSize_value1").value;	
 
+	var _normalize_temp = document.getElementById("TakeImage_Normalize_value1").selectedIndex;
+	if (_normalize_temp == '0') {
+		_normalize_temp = '1';
+	}
+	else {
+		_normalize_temp = '0';
+	}
+
 	var _focus_temp = document.getElementById("TakeImage_CamFocus_value1").selectedIndex;
 	if (_focus_temp == '0') {
 		_focus_temp = '1';
@@ -2934,7 +2958,7 @@ function camSettingsSet(){
 
     url = url + "&agc=" + _agc_temp + "&agcg=" + _agcg_temp + "&bpc=" + _bpc_temp + "&wpc=" + _wpc_temp;
     url = url + "&rgma=" + _rgma_temp + "&lenc=" + _lenc_temp + "&mirror=" + _mirror_temp + "&flip=" + _flip_temp;
-    url = url + "&dcw=" + _dcw_temp + "&den=" + _denoise_temp + "&ledi=" + _ledi_temp;
+    url = url + "&dcw=" + _dcw_temp + "&den=" + _denoise_temp + "&ledi=" + _ledi_temp + "&nrm=" + _normalize_temp;
 
     if (_zoom_temp != '0') {
         url = url + "&zoom=" + _zoom_temp + "&zooms=" + _zooms_temp;

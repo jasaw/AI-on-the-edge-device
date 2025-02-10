@@ -19,41 +19,6 @@ template<typename T> inline const T abs(T const & x)
     return ( x<0 ) ? -x : x;
 }
 
-void CFindTemplate::normalize_img(unsigned char *img, int _width, int _channels, 
-                                  int work_x_start, int work_x_stop, int work_y_start, int work_y_stop)
-{
-    if (_channels != 3)
-        return;
-
-    int x, y;
-    int16_t min = 255 * 3;
-    int16_t max = 0;
-
-    for (x = work_x_start; x < work_x_stop; x++) {
-        for (y = work_y_start; y < work_y_stop; y++) {
-            stbi_uc* p_org = img + (_channels * (y * _width + x));
-            uint16_t greyscale_org = p_org[0] + p_org[1] + p_org[2];
-            if (greyscale_org < min)
-                min = greyscale_org;
-            if (greyscale_org > max)
-                max = greyscale_org;
-        }
-    }
-
-    double scale = 255.0 / (max * 0.9 - min * 1.1);
-
-    for (x = work_x_start; x < work_x_stop; x++) {
-        for (y = work_y_start; y < work_y_stop; y++) {
-            stbi_uc* p_org = img + (_channels * (y * _width + x));
-            int16_t greyscale_org = p_org[0] + p_org[1] + p_org[2];
-            uint8_t scaled = MIN(MAX((greyscale_org - min) * scale, 0), 255);
-            p_org[0] = scaled;
-            p_org[1] = scaled;
-            p_org[2] = scaled;
-        }
-    }
-}
-
 uint8_t CFindTemplate::scan_find_template(struct RefInfo *ref, uint8_t* rgb_template)
 {
     if (channels != 3)
@@ -183,8 +148,8 @@ bool CFindTemplate::FindTemplateAlt(struct RefInfo *ref)
 
     RGBImageLock();
 
-    normalize_img(rgb_template, tpl_width, channels, 0, tpl_width, 0, tpl_height);
-    normalize_img(rgb_image, width, channels, ow_start, ow_stop, oh_start, oh_stop);
+    NormalizeImg(rgb_template, tpl_width, channels, 0, tpl_width, 0, tpl_height);
+    NormalizeImg(rgb_image, width, channels, ow_start, ow_stop, oh_start, oh_stop);
 
     ESP_LOGD(TAG, "Finding template ...");
 
@@ -231,14 +196,14 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
 
 
     ow_start = _ref->target_x - _ref->search_x;
-    ow_start = MAX(ow_start, 0);
+    ow_start = std::max(ow_start, 0);
     ow_stop = _ref->target_x + _ref->search_x;
     if ((ow_stop + tpl_width) > width)
         ow_stop = width - tpl_width;
     ow = ow_stop - ow_start + 1;
 
     oh_start = _ref->target_y - _ref->search_y;
-    oh_start = MAX(oh_start, 0);
+    oh_start = std::max(oh_start, 0);
     oh_stop = _ref->target_y + _ref->search_y;
     if ((oh_stop + tpl_height) > height)
         oh_stop = height - tpl_height;
@@ -250,7 +215,7 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
 
 //    ESP_LOGD(TAG, "FindTemplate 02");
 
-    if (((_ref->alignment_algo == 2) || (_ref->alignment_algo == 4)) && (_ref->fastalg_x > -1) && (_ref->fastalg_y > -1))     // für Testzwecke immer Berechnen
+    if ((_ref->alignment_algo == 2) && (_ref->fastalg_x > -1) && (_ref->fastalg_y > -1))     // für Testzwecke immer Berechnen
     {
         isSimilar = CalculateSimularities(rgb_template, _ref->fastalg_x, _ref->fastalg_y, ow, oh, min, avg, max, SAD, _ref->fastalg_SAD, _ref->fastalg_SAD_criteria);
 /*#ifdef DEBUG_DETAIL_ON
@@ -318,14 +283,8 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
 //    ESP_LOGD(TAG, "FindTemplate 06");
 
 
-    if ((_ref->alignment_algo == 2) || (_ref->alignment_algo == 4))
-        isSimilar = CalculateSimularities(rgb_template, _ref->found_x, _ref->found_y, ow, oh, min, avg, max, SAD, _ref->fastalg_SAD, _ref->fastalg_SAD_criteria);
-
-    if (isSimilar)
-    {
-        ESP_LOGI(TAG, "Alignment successful");
-    }
-
+    if (_ref->alignment_algo == 2)
+        CalculateSimularities(rgb_template, _ref->found_x, _ref->found_y, ow, oh, min, avg, max, SAD, _ref->fastalg_SAD, _ref->fastalg_SAD_criteria);
 
 //    ESP_LOGD(TAG, "FindTemplate 07");
 
@@ -348,7 +307,7 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
     
 //    ESP_LOGD(TAG, "FindTemplate 08");
 
-    return isSimilar;
+    return false;
 }
 
 
@@ -396,6 +355,3 @@ bool CFindTemplate::CalculateSimularities(uint8_t* _rgb_tmpl, int _startx, int _
 
     return false;
 }
-
-
-

@@ -650,6 +650,42 @@ void CImageBasis::Negative(void)
 }
 
 
+void CImageBasis::NormalizeImg(unsigned char *img, int _width, int _channels, 
+                               int work_x_start, int work_x_stop, int work_y_start, int work_y_stop)
+{
+    if (_channels != 3)
+        return;
+
+    int x, y;
+    int16_t min = 255 * 3;
+    int16_t max = 0;
+
+    for (x = work_x_start; x < work_x_stop; x++) {
+        for (y = work_y_start; y < work_y_stop; y++) {
+            stbi_uc* p_org = img + (_channels * (y * _width + x));
+            uint16_t greyscale_org = p_org[0] + p_org[1] + p_org[2];
+            if (greyscale_org < min)
+                min = greyscale_org;
+            if (greyscale_org > max)
+                max = greyscale_org;
+        }
+    }
+
+    double scale = 255.0 / (max * 0.9 - min * 1.1);
+
+    for (x = work_x_start; x < work_x_stop; x++) {
+        for (y = work_y_start; y < work_y_stop; y++) {
+            stbi_uc* p_org = img + (_channels * (y * _width + x));
+            int16_t greyscale_org = p_org[0] + p_org[1] + p_org[2];
+            uint8_t scaled = std::min(std::max((greyscale_org - min) * scale, 0.0), 255.0);
+            p_org[0] = scaled;
+            p_org[1] = scaled;
+            p_org[2] = scaled;
+        }
+    }
+}
+
+
 void CImageBasis::Contrast(float _contrast)  //input range [-100..100]
 {
     stbi_uc* p_source;

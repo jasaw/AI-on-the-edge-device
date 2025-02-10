@@ -139,6 +139,7 @@ function ParseConfig() {
     ParamAddValue(param, catname, "CamFocusAuto");
     ParamAddValue(param, catname, "CamFocusManualLevel");
     ParamAddValue(param, catname, "LEDIntensity");
+    ParamAddValue(param, catname, "Normalize");
     ParamAddValue(param, catname, "Demo");
 
     var catname = "Alignment";
@@ -519,6 +520,7 @@ function getCamConfig() {
     param["TakeImage"]["CamFocusAuto"]["enabled"] = true;
     param["TakeImage"]["CamFocusManualLevel"]["enabled"] = true;
     param["TakeImage"]["LEDIntensity"]["enabled"] = true;
+    param["TakeImage"]["Normalize"]["enabled"] = true;
 
     if (!param["System"]["Tooltip"]["found"]) {
         param["System"]["Tooltip"]["found"] = true;
@@ -666,6 +668,10 @@ function getCamConfig() {
     if (!param["TakeImage"]["LEDIntensity"]["found"]) {
         param["TakeImage"]["LEDIntensity"]["found"] = true;
         param["TakeImage"]["LEDIntensity"].value1 = '50';
+    }
+    if (!param["TakeImage"]["Normalize"]["found"]) {
+        param["TakeImage"]["Normalize"]["found"] = true;
+        param["TakeImage"]["Normalize"].value1 = 'false';
     }
 
     return param;	
