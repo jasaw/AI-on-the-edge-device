@@ -1259,12 +1259,6 @@ esp_err_t handler_editflow(httpd_req_t *req)
                 }
             }
 
-            if (httpd_query_key_value(_query, "nrm", _valuechar, 30) == ESP_OK)
-            {
-                std::string _normalize = std::string(_valuechar);
-                CFstatus.CamConfig.CameraNormalize = alphanumericToBoolean(_normalize);
-            }
-
             if (_task.compare("cam_settings") == 0)
             {
                 // Kameraeinstellungen wurden verädert

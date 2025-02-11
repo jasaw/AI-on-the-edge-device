@@ -44,6 +44,4 @@ typedef struct
     bool CameraFocusEnabled;
     bool CameraManualFocus;
     uint16_t CameraManualFocusLevel;
-
-    bool CameraNormalize;
 } cam_config_t;

@@ -722,21 +722,6 @@
 			<td>$TOOLTIP_TakeImage_LEDIntensity</td>
 		</tr>
 		
-		<tr class="expert" unused_id="TakeImage_Normalize_ex3">
-			<td class="indent1">
-				<label>
-					<class id="TakeImage_Normalize_text" style="color:black;">Normalize image</class>
-				</label>
-			</td>
-			<td>
-				<select id="TakeImage_Normalize_value1">
-					<option value="true">enable (true)</option>
-					<option value="false" selected>disable (false)</option>
-				</select>
-			</td>
-			<td>$TOOLTIP_TakeImage_Normalize</td>
-		</tr>
-
 		<tr class="expert" unused_id="TakeImage_Demo_ex3">
 			<td class="indent1">
 				<label>
@@ -860,6 +845,22 @@
 					oninput="(!validity.rangeUnderflow||(value=0)) && (!validity.stepMismatch||(value=parseInt(this.value)));">Days
 			</td>
 			<td>$TOOLTIP_Digits_ROIImagesRetention</td>
+		</tr>
+
+		<tr class="DigitItem">
+			<td class="indent1">
+				<label>
+					<input type="checkbox" id="Digits_Normalize_enabled" value="1"  onclick = 'InvertEnableItem("Digits", "Normalize")' unchecked >
+					<label for=Digits_Normalize_enabled><class id="Digits_Normalize_text" style="color:black;">Normalize ROI</class></label>
+				</label>
+			</td>
+			<td>
+				<select id="Digits_Normalize_value1">
+					<option value="true">enable (true)</option>
+					<option value="false" selected>disable (false)</option>
+				</select>
+			</td>
+			<td>$TOOLTIP_Digits_Normalize</td>
 		</tr>
 
 
@@ -2429,7 +2430,6 @@ function UpdateInput() {
     WriteParameter(param, category, "TakeImage", "CamFocusAuto", false);
     WriteParameter(param, category, "TakeImage", "CamFocusManualLevel", false);
     WriteParameter(param, category, "TakeImage", "LEDIntensity", false);
-    WriteParameter(param, category, "TakeImage", "Normalize", false);
     WriteParameter(param, category, "TakeImage", "Demo", false);
 	
     WriteParameter(param, category, "Alignment", "SearchFieldX", false);		
@@ -2440,6 +2440,7 @@ function UpdateInput() {
     WriteParameter(param, category, "Digits", "CNNGoodThreshold", true);
     WriteParameter(param, category, "Digits", "ROIImagesLocation", true);		
     WriteParameter(param, category, "Digits", "ROIImagesRetention", true);		
+    WriteParameter(param, category, "Digits", "Normalize", true);
     
     WriteParameter(param, category, "Analog", "ROIImagesLocation", true);		
     WriteParameter(param, category, "Analog", "ROIImagesRetention", true);		
@@ -2600,7 +2601,6 @@ function ReadParameterAll() {
     ReadParameter(param, "TakeImage", "CamFocusAuto", false);
     ReadParameter(param, "TakeImage", "CamFocusManualLevel", false);
     ReadParameter(param, "TakeImage", "LEDIntensity", false);	
-    ReadParameter(param, "TakeImage", "Normalize", false);
     ReadParameter(param, "TakeImage", "Demo", false);	
 
     ReadParameter(param, "Alignment", "SearchFieldX", false);	
@@ -2612,6 +2612,7 @@ function ReadParameterAll() {
     ReadParameter(param, "Digits", "CNNGoodThreshold", true);
     ReadParameter(param, "Digits", "ROIImagesLocation", true);
     ReadParameter(param, "Digits", "ROIImagesRetention", true);
+    ReadParameter(param, "Digits", "Normalize", true);
 
     ReadParameter(param, "Analog", "Model", false);
     ReadParameter(param, "Analog", "ROIImagesLocation", true);
@@ -2921,14 +2922,6 @@ function camSettingsSet(){
     var _zoomy_temp = document.getElementById("TakeImage_CamZoomOffsetY_value1").value;
     var _zooms_temp = document.getElementById("TakeImage_CamZoomSize_value1").value;	
 
-	var _normalize_temp = document.getElementById("TakeImage_Normalize_value1").selectedIndex;
-	if (_normalize_temp == '0') {
-		_normalize_temp = '1';
-	}
-	else {
-		_normalize_temp = '0';
-	}
-
 	var _focus_temp = document.getElementById("TakeImage_CamFocus_value1").selectedIndex;
 	if (_focus_temp == '0') {
 		_focus_temp = '1';
@@ -2958,7 +2951,7 @@ function camSettingsSet(){
 
     url = url + "&agc=" + _agc_temp + "&agcg=" + _agcg_temp + "&bpc=" + _bpc_temp + "&wpc=" + _wpc_temp;
     url = url + "&rgma=" + _rgma_temp + "&lenc=" + _lenc_temp + "&mirror=" + _mirror_temp + "&flip=" + _flip_temp;
-    url = url + "&dcw=" + _dcw_temp + "&den=" + _denoise_temp + "&ledi=" + _ledi_temp + "&nrm=" + _normalize_temp;
+    url = url + "&dcw=" + _dcw_temp + "&den=" + _denoise_temp + "&ledi=" + _ledi_temp;
 
     if (_zoom_temp != '0') {
         url = url + "&zoom=" + _zoom_temp + "&zooms=" + _zooms_temp;
