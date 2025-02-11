@@ -64,7 +64,7 @@ bool CAlignAndCutImage::Align(RefInfo *_temp1, RefInfo *_temp2)
             // ref image is defined
             ESP_LOGD(TAG, "Before ft->FindTemplateAlt(_temp2); %s", _temp2->image_file.c_str());
             foundRef2 = ft->FindTemplateAlt(_temp2);
-            _temp2->width = ft->tpl_width;
+            _temp2->width = ft->tpl_width; // set red box width and height to be drawn later
             _temp2->height = ft->tpl_height; 
             if (foundRef2 && (_temp2->found_x >= 0) && (_temp2->found_y >= 0))
             {
@@ -77,6 +77,27 @@ bool CAlignAndCutImage::Align(RefInfo *_temp1, RefInfo *_temp2)
         {
             dx = dx / numFound;
             dy = dy / numFound;
+            // adjust the red box position to be drawn later
+            if ((_temp1->found_x >= 0) && (_temp1->found_y >= 0))
+            {
+                _temp1->found_x += dx;
+                _temp1->found_y += dy;
+            }
+            if (!foundRef1)
+            {
+                _temp1->target_x += dx;
+                _temp1->target_y += dy;
+            }
+            if ((_temp2->found_x >= 0) && (_temp2->found_y >= 0))
+            {
+                _temp2->found_x += dx;
+                _temp2->found_y += dy;
+            }
+            if (!foundRef2)
+            {
+                _temp2->target_x += dx;
+                _temp2->target_y += dy;
+            }
         }
 
         delete ft;
