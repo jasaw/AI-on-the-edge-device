@@ -374,13 +374,13 @@ void ClassFlowAlignment::DrawRef(CImageBasis *_zw)
     if (_zw->ImageOkay()) {
         if ((References[0].target_x >= 0) && (References[0].target_y >= 0))
         {
-            _zw->drawRect(References[0].target_x, References[0].target_y, References[0].width, References[0].height, 0, 0, 255, 2);
+            _zw->drawRect(References[0].draw_target_x, References[0].draw_target_y, References[0].width, References[0].height, 0, 0, 255, 2);
             if ((References[0].found_x >= 0) && (References[0].found_y >= 0))
                 _zw->drawRect(References[0].found_x, References[0].found_y, References[0].width, References[0].height, 255, 0, 0, 2);
         }
         if ((References[1].target_x >= 0) && (References[1].target_y >= 0))
         {
-            _zw->drawRect(References[1].target_x, References[1].target_y, References[1].width, References[1].height, 0, 0, 255, 2);
+            _zw->drawRect(References[1].draw_target_x, References[1].draw_target_y, References[1].width, References[1].height, 0, 0, 255, 2);
             if ((References[1].found_x >= 0) && (References[1].found_y >= 0))
                 _zw->drawRect(References[1].found_x, References[1].found_y, References[1].width, References[1].height, 255, 0, 0, 2);
         }

@@ -52,6 +52,8 @@ bool CAlignAndCutImage::Align(RefInfo *_temp1, RefInfo *_temp2)
             foundRef1 = ft->FindTemplateAlt(_temp1);
             _temp1->width = ft->tpl_width; // set red box width and height to be drawn later
             _temp1->height = ft->tpl_height; 
+            _temp1->draw_target_x = _temp1->target_x;
+            _temp1->draw_target_y = _temp1->target_y;
             if (foundRef1 && (_temp1->found_x >= 0) && (_temp1->found_y >= 0))
             {
                 dx += _temp1->target_x - _temp1->found_x;
@@ -66,6 +68,8 @@ bool CAlignAndCutImage::Align(RefInfo *_temp1, RefInfo *_temp2)
             foundRef2 = ft->FindTemplateAlt(_temp2);
             _temp2->width = ft->tpl_width; // set red box width and height to be drawn later
             _temp2->height = ft->tpl_height; 
+            _temp2->draw_target_x = _temp2->target_x;
+            _temp2->draw_target_y = _temp2->target_y;
             if (foundRef2 && (_temp2->found_x >= 0) && (_temp2->found_y >= 0))
             {
                 dx += _temp2->target_x - _temp2->found_x;
@@ -85,8 +89,8 @@ bool CAlignAndCutImage::Align(RefInfo *_temp1, RefInfo *_temp2)
             }
             if (!foundRef1)
             {
-                _temp1->target_x += dx;
-                _temp1->target_y += dy;
+                _temp1->draw_target_x = _temp1->target_x + dx;
+                _temp1->draw_target_y = _temp1->target_y + dy;
             }
             if ((_temp2->found_x >= 0) && (_temp2->found_y >= 0))
             {
@@ -95,8 +99,8 @@ bool CAlignAndCutImage::Align(RefInfo *_temp1, RefInfo *_temp2)
             }
             if (!foundRef2)
             {
-                _temp2->target_x += dx;
-                _temp2->target_y += dy;
+                _temp2->draw_target_x = _temp2->target_x + dx;
+                _temp2->draw_target_y = _temp2->target_y + dy;
             }
         }
 

@@ -9,6 +9,8 @@ struct RefInfo {
     std::string image_file; 
     int target_x = 0;
     int target_y = 0;
+    int draw_target_x = 0;
+    int draw_target_y = 0;
     int width = 0;
     int height = 0;
     int found_x;
