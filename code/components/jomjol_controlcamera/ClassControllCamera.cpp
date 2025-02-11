@@ -1049,12 +1049,6 @@ esp_err_t CCamera::CaptureToBasisImage(CImageBasis *_Image, int delay)
 
     delete _zwImage;
 
-    bool normalize = CCstatus.isTempImage ? CFstatus.CamConfig.CameraNormalize : CCstatus.CamConfig.CameraNormalize;
-    if (normalize)
-    {
-        _Image->NormalizeImg(_Image->rgb_image, width, channels, 0, width, 0, height);
-    }
-
 #ifdef DEBUG_DETAIL_ON
     LogFile.WriteHeapInfo("CaptureToBasisImage - Done");
 #endif
