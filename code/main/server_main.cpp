@@ -123,6 +123,13 @@ esp_err_t info_get_handler(httpd_req_t *req)
         httpd_resp_sendstr(req, formated);
         return ESP_OK;        
     }
+    else if (_task.compare("RoundDuration") == 0)
+    {
+        char formated[10] = "";    
+        snprintf(formated, sizeof(formated), "%d", getLastRoundDuration());
+        httpd_resp_sendstr(req, formated);
+        return ESP_OK;        
+    }
     else if (_task.compare("CamId") == 0)
     {
         switch (CCstatus.CamSensor_id) {

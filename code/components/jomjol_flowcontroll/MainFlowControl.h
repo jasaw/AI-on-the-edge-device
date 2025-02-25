@@ -41,6 +41,7 @@ void DeleteMainFlowTask(void);
 bool isSetupModusActive(void);
 
 int getCountFlowRounds(void);
+int getLastRoundDuration(void);
 
 #ifdef ENABLE_MQTT
 esp_err_t MQTTCtrlFlowStart(std::string _topic);

@@ -46,6 +46,7 @@ long auto_interval = 0;
 bool autostartIsEnabled = false;
 
 int countRounds = 0;
+time_t lastRoundDuration = 0;
 bool isPlannedReboot = false;
 
 static const char *TAG = "MAINCTRL";
@@ -77,6 +78,11 @@ bool getIsPlannedReboot(void)
 int getCountFlowRounds(void)
 {
     return countRounds;
+}
+
+int getLastRoundDuration(void)
+{
+    return (int)lastRoundDuration;
 }
 
 esp_err_t GetJPG(std::string _filename, httpd_req_t *req)
@@ -1609,8 +1615,10 @@ void task_autodoFlow(void *pvParameter)
             LogFile.RemoveOldDataLog();
         }
 
+        lastRoundDuration = getUpTime() - roundStartTime;
+
         // Round finished -> Logfile
-        LogFile.WriteToFile(ESP_LOG_INFO, TAG, "Round #" + std::to_string(countRounds) + " completed (" + std::to_string(getUpTime() - roundStartTime) + " seconds)");
+        LogFile.WriteToFile(ESP_LOG_INFO, TAG, "Round #" + std::to_string(countRounds) + " completed (" + std::to_string(lastRoundDuration) + " seconds)");
 
         // CPU Temp -> Logfile
         LogFile.WriteToFile(ESP_LOG_DEBUG, TAG, "CPU Temperature: " + std::to_string((int)temperatureRead()) + "°C");
