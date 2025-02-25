@@ -125,6 +125,7 @@
 				<div>
 					<span id="uptime" ></span>
 					<span id="round" ></span>
+					<span id="roundduration" ></span>
 				</div>
 			</td>
 		</tr>
@@ -159,6 +160,7 @@
 			loadRSSI();
 			loadUptime();
 			loadRoundCounter();
+			loadRoundDuration();
 		}
 
 		function LoadROIImage(){
@@ -271,6 +273,20 @@
 				if (this.readyState == 4 && this.status == 200) {
 					var _rsp = xhttp.responseText;
 					$('#round').html("(Round: " + _rsp + ")");
+				}
+			}
+			
+			xhttp.open("GET", url, true);
+			xhttp.send();
+		}
+
+		function loadRoundDuration() {
+			url = domainname + '/info?type=RoundDuration';
+			var xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4 && this.status == 200) {
+					var _rsp = xhttp.responseText;
+					$('#roundduration').html(_rsp + "s");
 				}
 			}
 			

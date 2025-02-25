@@ -57,6 +57,8 @@ class CImageBasis
 
         void setPixelColor(int x, int y, int r, int g, int b);
         void Negative(void);
+        void NormalizeImg(unsigned char *img, int _width, int _channels, 
+                          int work_x_start, int work_x_stop, int work_y_start, int work_y_stop);
         void Contrast(float _contrast);
         bool ImageOkay();
         bool CopyFromMemory(uint8_t* _source, int _size);

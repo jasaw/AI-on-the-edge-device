@@ -160,6 +160,7 @@ function ParseConfig() {
     ParamAddValue(param, catname, "CNNGoodThreshold", 1);
     ParamAddValue(param, catname, "ROIImagesLocation");
     ParamAddValue(param, catname, "ROIImagesRetention");
+    ParamAddValue(param, catname, "Normalize");
 
     var catname = "Analog";
     category[catname] = new Object();

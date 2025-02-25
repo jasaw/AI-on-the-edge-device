@@ -10,6 +10,156 @@ static const char* TAG = "C FIND TEMPL";
 
 // #define DEBUG_DETAIL_ON  
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
+
+template<typename T> inline const T abs(T const & x)
+{
+    return ( x<0 ) ? -x : x;
+}
+
+uint8_t CFindTemplate::scan_find_template(struct RefInfo *ref, uint8_t* rgb_template)
+{
+    if (channels != 3)
+        return 0;
+
+    const uint64_t critSAD = 0x2000;
+    int ow_start, ow_stop;
+    int oh_start, oh_stop;
+    unsigned char *img = rgb_image;
+
+    ref->found_x = -1;
+    ref->found_y = -1;
+
+    if (ref->search_x == 0)
+        ref->search_x = width;
+
+    if (ref->search_y == 0)
+        ref->search_y = height;
+
+    ow_start = MAX(ref->target_x - ref->search_x, 0);
+    ow_stop = MIN(ref->target_x + ref->search_x, width - tpl_width);
+    oh_start = MAX(ref->target_y - ref->search_y, 0);
+    oh_stop = MIN(ref->target_y + ref->search_y, height - tpl_height);
+
+    // find best match
+    uint64_t SAD = 0;
+    uint64_t avgSAD = 0;
+    uint64_t tmpMinSAD = tpl_width * tpl_height * channels * 255;
+    uint64_t minSAD = tmpMinSAD * tmpMinSAD;
+    uint64_t minSADvariance = minSAD;
+
+    ESP_LOGD(TAG, "Scan finding ...");
+
+    ESP_LOGD(TAG, "width %d, height %d, tpl_width %d, tpl_height %d", width, height, tpl_width, tpl_height);
+    ESP_LOGD(TAG, "ow_start %d, ow_stop %d, oh_start %d, oh_stop %d, minSAD 0x%x%08x, minSADvariance 0x%x%08x",
+            ow_start, ow_stop, oh_start, oh_stop,
+            (unsigned int)(minSAD >> 32), (unsigned int)(minSAD & 0xffffffff),
+            (unsigned int)(minSADvariance >> 32), (unsigned int)(minSADvariance & 0xffffffff));
+
+    int xouter, youter, tpl_x, tpl_y;
+    for (youter = oh_start; youter < oh_stop; youter++)
+    {
+        for (xouter = ow_start; xouter < ow_stop; xouter++)
+        {
+            SAD = 0;
+            uint64_t SADvariance = 0;
+            uint64_t prevDD = 0;
+            for (tpl_y = 0; tpl_y < tpl_height; tpl_y++)
+            {
+                for (tpl_x = 0; tpl_x < tpl_width; tpl_x++)
+                {
+                    int pos_x = xouter + tpl_x;
+                    int pos_y = youter + tpl_y;
+                    stbi_uc* p_org = img + (channels * (pos_y * width + pos_x));
+                    const stbi_uc* p_tpl = rgb_template + (channels * (tpl_y * tpl_width + tpl_x));
+                    int greyscale_tpl = (int)p_tpl[0] + (int)p_tpl[1] + (int)p_tpl[2];
+                    int greyscale_org = (int)p_org[0] + (int)p_org[1] + (int)p_org[2];
+                    int diff = greyscale_tpl - greyscale_org;
+                    int dd = diff * diff;
+                    SADvariance += abs<int64_t>(diff - prevDD);
+                    prevDD = diff;
+                    SAD += dd;
+                    if ((SAD >= minSAD) || (SADvariance >= minSADvariance))
+                    {
+                        // end loop
+                        tpl_y = tpl_height;
+                        tpl_x = tpl_width;
+                    }
+                }
+            }
+            if ((SAD < minSAD) && (SADvariance < minSADvariance))
+            {
+                minSAD = SAD;
+                minSADvariance = SADvariance;
+                ref->found_x = xouter;
+                ref->found_y = youter;
+            }
+        }
+    }
+
+    avgSAD = minSAD / (tpl_width * tpl_height);
+
+    ESP_LOGI(TAG, "Best match: SAD 0x%x%08x, avgSAD: 0x%x%08x, SADvariance: 0x%x%08x, found (x %d, y %d)",
+            (unsigned int)(minSAD >> 32), (unsigned int)(minSAD & 0xffffffff),
+            (unsigned int)(avgSAD >> 32), (unsigned int)(avgSAD & 0xffffffff),
+            (unsigned int)(minSADvariance >> 32), (unsigned int)(minSADvariance & 0xffffffff),
+            ref->found_x, ref->found_y);    
+
+    ref->fastalg_x = ref->found_x;
+    ref->fastalg_y = ref->found_y;
+    ref->fastalg_min = minSAD;
+    ref->fastalg_avg = avgSAD;
+    ref->fastalg_max = tmpMinSAD * tmpMinSAD;
+    ref->fastalg_SAD = SAD;
+
+    return avgSAD < critSAD;
+}
+
+bool CFindTemplate::FindTemplateAlt(struct RefInfo *ref)
+{
+    uint8_t* rgb_template;
+
+    if (file_size(ref->image_file.c_str()) == 0) {
+        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, ref->image_file + " is empty!");
+        return false;
+    }
+   
+    rgb_template = stbi_load(ref->image_file.c_str(), &tpl_width, &tpl_height, &tpl_bpp, channels);
+
+    if (rgb_template == NULL) {
+        LogFile.WriteToFile(ESP_LOG_ERROR, TAG, "Failed to load " + ref->image_file + "! Is it corrupted?");
+        return false;
+    }
+
+    if (ref->search_x == 0)
+        ref->search_x = width;
+    if (ref->search_y == 0)
+        ref->search_y = height;
+
+    int ow_start, ow_stop;
+    int oh_start, oh_stop;
+
+    ow_start = MAX(ref->target_x - ref->search_x, 0);
+    ow_stop = MIN(ref->target_x + ref->search_x + tpl_width, width);
+    oh_start = MAX(ref->target_y - ref->search_y, 0);
+    oh_stop = MIN(ref->target_y + ref->search_y + tpl_height, height);
+
+    RGBImageLock();
+
+    NormalizeImg(rgb_template, tpl_width, channels, 0, tpl_width, 0, tpl_height);
+    NormalizeImg(rgb_image, width, channels, ow_start, ow_stop, oh_start, oh_stop);
+
+    ESP_LOGD(TAG, "Finding template ...");
+
+    bool found = scan_find_template(ref, rgb_template);
+
+    RGBImageRelease();
+    stbi_image_free(rgb_template);
+
+    return found;
+}
 
 bool CFindTemplate::FindTemplate(RefInfo *_ref)
 {
@@ -114,9 +264,12 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
                 {
                     stbi_uc* p_org = rgb_image + (channels * ((youter + tpl_y) * width + (xouter + tpl_x)));
                     stbi_uc* p_tpl = rgb_template + (channels * (tpl_y * tpl_width + tpl_x));
-                    for (_ch = 0; _ch < _anzchannels; ++_ch)
+                    if (channels == 3)
                     {
-                        aktSAD += pow(p_tpl[_ch] - p_org[_ch], 2);
+                        double greyscale_tpl = 0.2989 * p_tpl[0] + 0.5870 * p_tpl[1] + 0.1140 * p_tpl[2];
+                        double greyscale_org = 0.2989 * p_org[0] + 0.5870 * p_org[1] + 0.1140 * p_org[2];
+                        double dif = greyscale_tpl - greyscale_org;
+                        aktSAD += dif*dif;
                     }
                 }
             if (aktSAD < minSAD)
@@ -132,7 +285,6 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
 
     if (_ref->alignment_algo == 2)
         CalculateSimularities(rgb_template, _ref->found_x, _ref->found_y, ow, oh, min, avg, max, SAD, _ref->fastalg_SAD, _ref->fastalg_SAD_criteria);
-
 
 //    ESP_LOGD(TAG, "FindTemplate 07");
 
@@ -162,9 +314,9 @@ bool CFindTemplate::FindTemplate(RefInfo *_ref)
 
 bool CFindTemplate::CalculateSimularities(uint8_t* _rgb_tmpl, int _startx, int _starty, int _sizex, int _sizey, int &min, float &avg, int &max, float &SAD, float _SADold, float _SADcrit)
 {
-    int dif;
-    int minDif = 255;
-    int maxDif = -255;
+    double dif;
+    double minDif = 65535;
+    double maxDif = 0;
     double avgDifSum = 0;
     long int anz = 0;
     double aktSAD = 0;    
@@ -176,31 +328,30 @@ bool CFindTemplate::CalculateSimularities(uint8_t* _rgb_tmpl, int _startx, int _
         {
             stbi_uc* p_org = rgb_image + (channels * ((youter + _starty) * width + (xouter + _startx)));
             stbi_uc* p_tpl = _rgb_tmpl + (channels * (youter * tpl_width + xouter));
-            for (_ch = 0; _ch < channels; ++_ch)
+            if (channels == 3)
             {
-                dif = p_tpl[_ch] - p_org[_ch];
-                aktSAD += pow(p_tpl[_ch] - p_org[_ch], 2);                
+                double greyscale_tpl = 0.2989 * p_tpl[0] + 0.5870 * p_tpl[1] + 0.1140 * p_tpl[2];
+                double greyscale_org = 0.2989 * p_org[0] + 0.5870 * p_org[1] + 0.1140 * p_org[2];
+                dif = greyscale_tpl - greyscale_org;
+                dif = dif*dif;
+                aktSAD += dif;
                 if (dif < minDif) minDif = dif;
                 if (dif > maxDif) maxDif = dif;
-                avgDifSum += dif;
                 anz++;
             }
         }
 
-    avg = avgDifSum / anz;
+    avg = aktSAD / anz;
     min = minDif;
     max = maxDif;
     SAD = sqrt(aktSAD) / anz;
 
     float _SADdif = abs(SAD - _SADold);
 
-    ESP_LOGD(TAG, "Anzahl %ld, avgDifSum %fd, avg %f, SAD_neu: %fd, _SAD_old: %f, _SAD_crit:%f", anz, avgDifSum, avg, SAD, _SADold, _SADdif);
+    ESP_LOGD(TAG, "Count %ld, aktSAD %fd, SAD_now: %fd, _SAD_old: %f, _SAD_dif:%f, _SAD_crit:%f", anz, aktSAD, SAD, _SADold, _SADdif, _SADcrit);
 
     if (_SADdif <= _SADcrit)
         return true;
 
     return false;
 }
-
-
-

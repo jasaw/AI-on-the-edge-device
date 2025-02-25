@@ -24,6 +24,7 @@ ClassFlowCNNGeneral::ClassFlowCNNGeneral(ClassFlowAlignment *_flowalign, t_CNNTy
     modelxsize = 1;
     modelysize = 1;
     CNNGoodThreshold = 0.0;
+    normalizeRoiEnabled = false;
     ListFlowControll = NULL;
     previousElement = NULL;   
     SaveAllFiles = false; 
@@ -353,6 +354,11 @@ bool ClassFlowCNNGeneral::ReadParameter(FILE* pfile, string& aktparamgraph) {
             }
         }
         
+        if ((toUpper(splitted[0]) == "NORMALIZE") && (splitted.size() > 1))
+        {
+            this->normalizeRoiEnabled = alphanumericToBoolean(splitted[1]);
+        }
+
         if (splitted.size() >= 5) {
             general* _analog = GetGENERAL(splitted[0], true);
             roi* neuroi = _analog->ROI[_analog->ROI.size()-1];
@@ -534,6 +540,29 @@ bool ClassFlowCNNGeneral::doAlignAndCut(string time) {
 
     return true;
 } 
+
+void ClassFlowCNNGeneral::NormalizeRoi(CImageBasis *_zw)
+{
+    if (_zw->ImageOkay() && normalizeRoiEnabled) { 
+        if (CNNType != Analogue && CNNType != Analogue100) {
+            for (int _dig = 0; _dig < GENERAL.size(); ++_dig) {
+                for (int i = 0; i < GENERAL[_dig]->ROI.size(); ++i) {
+                    int x1 = GENERAL[_dig]->ROI[i]->posx;
+                    int y1 = GENERAL[_dig]->ROI[i]->posy;
+                    int dx = GENERAL[_dig]->ROI[i]->deltax;
+                    int dy = GENERAL[_dig]->ROI[i]->deltay;
+                    int x2 = x1 + dx;
+                    int y2 = y1 + dy;
+                    x2 = std::min(x2, _zw->width - 1);
+                    y2 = std::min(y2, _zw->height - 1);
+                    _zw->RGBImageLock();
+                    _zw->NormalizeImg(_zw->rgb_image, _zw->width, _zw->channels, x1, x2, y1, y2);
+                    _zw->RGBImageRelease();
+                }
+            }
+        }
+    }
+}
 
 void ClassFlowCNNGeneral::DrawROI(CImageBasis *_zw) {
     if (_zw->ImageOkay()) { 

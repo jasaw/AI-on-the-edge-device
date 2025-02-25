@@ -28,6 +28,7 @@ protected:
 
     string cnnmodelfile;
     int modelxsize, modelysize, modelchannel;
+    bool normalizeRoiEnabled;
     bool isLogImageSelect;
     string LogImageSelect;
     ClassFlowAlignment* flowpostalignment;
@@ -56,6 +57,7 @@ public:
 
     string getReadoutRawString(int _analog);  
 
+    void NormalizeRoi(CImageBasis *_zw);
     void DrawROI(CImageBasis *_zw); 
 
    	std::vector<HTMLInfo*> GetHTMLInfo();   
