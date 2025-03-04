@@ -773,6 +773,7 @@
                     <option value="default" selected>Default</option>
                     <option value="highAccuracy" >HighAccuracy</option>
                     <option value="fast" >Fast</option>
+                    <option value="shifthighAccuracy" >Shift only HighAccuracy</option>
                     <option value="off" >Off</option><!-- add disable aligment algo |01.2023 -->
                 </select>
             </td>
@@ -843,6 +844,24 @@
                     oninput="(!validity.rangeUnderflow||(value=0)) && (!validity.stepMismatch||(value=parseInt(this.value)));">Days
             </td>
             <td>$TOOLTIP_Digits_ROIImagesRetention</td>
+        </tr>
+
+        <tr class="DigitItem">
+            <td class="indent1">
+                <label>
+                    <input type="checkbox" id="Digits_Normalize_enabled" value="1" onclick='InvertEnableItem("Digits", "Normalize")' unchecked>
+                    <label for=Digits_Normalize_enabled>
+                        <class id="Digits_Normalize_text" style="color:black;">Normalize ROI</class>
+                    </label>
+                </label>
+            </td>
+            <td>
+                <select id="Digits_Normalize_value1">
+                    <option value="true">enable (true)</option>
+                    <option value="false" selected>disable (false)</option>
+                </select>
+            </td>
+            <td>$TOOLTIP_Digits_Normalize</td>
         </tr>
 
         <!------------- Ananlog ROIs ------------------>
@@ -2415,6 +2434,7 @@ function UpdateInput() {
     WriteParameter(param, category, "Digits", "CNNGoodThreshold", true);
     WriteParameter(param, category, "Digits", "ROIImagesLocation", true);
     WriteParameter(param, category, "Digits", "ROIImagesRetention", true);
+    WriteParameter(param, category, "Digits", "Normalize", true);
 
     WriteParameter(param, category, "Analog", "ROIImagesLocation", true);
     WriteParameter(param, category, "Analog", "ROIImagesRetention", true);
@@ -2586,6 +2606,7 @@ function ReadParameterAll() {
     ReadParameter(param, "Digits", "CNNGoodThreshold", true);
     ReadParameter(param, "Digits", "ROIImagesLocation", true);
     ReadParameter(param, "Digits", "ROIImagesRetention", true);
+    ReadParameter(param, "Digits", "Normalize", true);
 
     ReadParameter(param, "Analog", "Model", false);
     ReadParameter(param, "Analog", "ROIImagesLocation", true);

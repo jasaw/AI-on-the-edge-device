@@ -176,6 +176,13 @@ t_CNNType ClassFlowControll::GetTypeAnalog()
 }
 
 #ifdef ALGROI_LOAD_FROM_MEM_AS_JPG
+void ClassFlowControll::NormalizeRoi(CImageBasis *_zw)
+{
+    if (flowdigit) {
+        flowdigit->NormalizeRoi(_zw);
+    }
+}
+
 void ClassFlowControll::DigitDrawROI(CImageBasis *_zw)
 {
     if (flowdigit) {
